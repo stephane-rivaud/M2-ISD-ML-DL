@@ -27,10 +27,12 @@ download fails, clone or download this repository so the `common/` and
    not writable, or if there is no repository, writes go to
    `/content/isd-1020-cache` (Colab) or `/tmp/isd-1020-cache` (outside Colab),
    unless overridden by `ISD1020_CACHE_DIR`;
-3. GitHub release `data-v1` (`stephane-rivaud/M2-ISD-ML-DL`) —
-   leftover fallback, **on by default**; short timeout
-   (connect 2 s, read 3 s); a failure (404, timeout) does not interrupt
-   loading: the next step is tried, with no traceback;
+3. parquet on the public course repository
+   (`stephane-rivaud/M2-ISD-ML-DL`) at
+   `https://raw.githubusercontent.com/stephane-rivaud/M2-ISD-ML-DL/main/data/<name>.parquet`
+   — **on by default**; short timeout (connect 2 s, read 3 s); a
+   failure (404, timeout) does not interrupt loading: the next step is
+   tried, with no traceback;
 4. download from the public **original source**, then write
    the cache.
 
@@ -38,16 +40,16 @@ Environment variables:
 
 | Variable | Effect |
 |---|---|
-| `ISD1020_USE_GITHUB_RELEASE=0` (`false` / `no` / `off`) | skip the release step |
-| `ISD1020_USE_GITHUB_RELEASE=1` (`true` / `yes` / `on`) | force the release step |
-| `ISD1020_REPO=owner/fork` | other GitHub slug (does not re-enable a release explicitly cut) |
+| `ISD1020_USE_COURSE_REPO=0` (`false` / `no` / `off`) | skip the course-repository step |
+| `ISD1020_USE_COURSE_REPO=1` (`true` / `yes` / `on`) | force the course-repository step |
+| `ISD1020_REPO=owner/fork` | other GitHub slug (does not re-enable a course-repository step explicitly cut) |
 | `ISD1020_CACHE_DIR` | cache directory (unchanged) |
 | `ISD1020_DATA_DIR` | `data/` directory (unchanged) |
 
 Each step prints a line indicating the origin. The committed parquet
 files are enough **without a network** as soon as one runs
-**inside the repository**. On a bare Colab, D0 downloads IBM's public CSV
-(once, then cache).
+**inside the repository**. On a bare Colab, the parquet is fetched from
+this course repository (once, then cache).
 
 `python data/fetch.py --all` regenerates the parquet files in `data/cache/`
 from the sources (also used if a committed copy must be rebuilt).

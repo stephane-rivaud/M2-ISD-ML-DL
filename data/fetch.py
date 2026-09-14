@@ -10,17 +10,16 @@ in ``data/cache/`` first. Small, permissively licensed copies also live in
 ``data/<name>.parquet`` (committed); ``load_*`` prefers those.
 
 ``load_*`` always resolves, in every environment (local Jupyter, nbconvert,
-a bare Colab VM): committed copy → local cache → GitHub release ``data-v1``
-(when that tier is enabled) → original public source (then cache). The release
-tier is **on by default** and is tried only for assets that exist on the
-release (``eco2mix``, ``nab``, ``idfm``). A 404 or timeout does not raise: the
-public URL is tried next. Release HTTP uses a short timeout (connect
-2 s, read 3 s) so a missing release cannot stall a classroom. Disable with
-``ISD1020_USE_GITHUB_RELEASE=0``; force on with ``=1``. ``ISD1020_REPO``
-overrides the GitHub slug. Override the cache directory with
+a bare Colab VM): committed copy → local cache → course repository parquet
+(``https://raw.githubusercontent.com/<slug>/main/data/<name>.parquet``) →
+original public source (then cache). The course-repository tier is **on by
+default** and is tried for every committed dataset. A 404 or timeout does
+not raise: the original source is tried next. That HTTP uses a short
+timeout (connect 2 s, read 3 s) so a missing file cannot stall a
+classroom. Disable with ``ISD1020_USE_COURSE_REPO=0``; force on with
+``=1``. ``ISD1020_REPO`` overrides the GitHub slug (default
+``stephane-rivaud/M2-ISD-ML-DL``). Override the cache directory with
 ``ISD1020_CACHE_DIR`` and the data directory with ``ISD1020_DATA_DIR``.
-Tag: ``data-v1``. Those files are committed in ``data/`` and remain
-release assets as a fallback, plus ``idfm.LICENSE.txt`` (ODbL).
 """
 
 from __future__ import annotations
@@ -106,7 +105,6 @@ DATA_DIR = resolve_data_dir()
 CACHE_DIR = resolve_cache_dir(DATA_DIR)
 
 DEFAULT_GITHUB_REPO_SLUG = "stephane-rivaud/M2-ISD-ML-DL"
-RELEASE_TAG = "data-v1"
 
 
 def github_repo_slug() -> str:
@@ -115,41 +113,36 @@ def github_repo_slug() -> str:
     )
 
 
-_RELEASE_FLAG_OFF = frozenset({"0", "false", "no", "off"})
-_RELEASE_FLAG_ON = frozenset({"1", "true", "yes", "on"})
+_COURSE_REPO_FLAG_OFF = frozenset({"0", "false", "no", "off"})
+_COURSE_REPO_FLAG_ON = frozenset({"1", "true", "yes", "on"})
 
 
-def github_release_enabled() -> bool:
-    """True unless ``ISD1020_USE_GITHUB_RELEASE`` is an explicit off value.
+def course_repo_enabled() -> bool:
+    """True unless ``ISD1020_USE_COURSE_REPO`` is an explicit off value.
 
-    Default is on. ``ISD1020_USE_GITHUB_RELEASE=0`` (or false/no/off) skips
-    the release. ``=1`` (or true/yes/on) forces it. ``ISD1020_REPO`` only
-    changes the slug; it does not override an explicit off.
+    Default is on. ``ISD1020_USE_COURSE_REPO=0`` (or false/no/off) skips
+    the course repository. ``=1`` (or true/yes/on) forces it.
+    ``ISD1020_REPO`` only changes the slug; it does not override an
+    explicit off.
     """
-    flag = os.environ.get("ISD1020_USE_GITHUB_RELEASE", "").strip().lower()
-    if flag in _RELEASE_FLAG_OFF:
+    flag = os.environ.get("ISD1020_USE_COURSE_REPO", "").strip().lower()
+    if flag in _COURSE_REPO_FLAG_OFF:
         return False
-    if flag in _RELEASE_FLAG_ON:
+    if flag in _COURSE_REPO_FLAG_ON:
         return True
     return True
 
 
-GITHUB_REPO_SLUG = DEFAULT_GITHUB_REPO_SLUG
 IDFM_LICENSE_FILENAME = "idfm.LICENSE.txt"
-RELEASE_ASSETS = (
-    "eco2mix.parquet",
-    "nab.parquet",
-    "idfm.parquet",
-    IDFM_LICENSE_FILENAME,
-)
 
 _USER_AGENT = "ISD-1020-course-pack/0.1 (Université Paris-Saclay teaching)"
 # (connect, read). Connect is short so a dead host fails fast in a classroom.
 _SOURCE_TIMEOUT: tuple[float, float] = (8.0, 45.0)
-# Release tier: fail fast on 404 / hang (every student pays this when the
-# release does not resolve). 2 s connect, 3 s read: a GitHub 404 returns in
-# well under that; a hung handshake cannot stall the room more than 5 s.
-_RELEASE_TIMEOUT: tuple[float, float] = (2.0, 3.0)
+# Course-repository tier: fail fast on 404 / hang (every student pays this
+# when a parquet is not yet published). 2 s connect, 3 s read: a GitHub
+# 404 returns in well under that; a hung handshake cannot stall the room
+# more than 5 s.
+_COURSE_REPO_TIMEOUT: tuple[float, float] = (2.0, 3.0)
 _EXPORT_TIMEOUT: tuple[float, float] = (8.0, 90.0)
 
 TELCO_URL = (
@@ -210,10 +203,10 @@ def _announce(name: str, message: str) -> None:
     print(f"{name}: {message}", flush=True)
 
 
-def _release_asset_url(filename: str) -> str:
+def _course_repo_parquet_url(name: str) -> str:
     return (
-        f"https://github.com/{github_repo_slug()}/releases/download/"
-        f"{RELEASE_TAG}/{filename}"
+        f"https://raw.githubusercontent.com/{github_repo_slug()}/main/"
+        f"data/{name}.parquet"
     )
 
 
@@ -278,19 +271,16 @@ def _read_parquet(path: Path) -> pd.DataFrame:
     return pd.read_parquet(path)
 
 
-def _is_release_parquet(name: str) -> bool:
-    return f"{name}.parquet" in RELEASE_ASSETS
-
-
-def _load_release_asset(name: str) -> pd.DataFrame:
-    filename = f"{name}.parquet"
-    return _read_parquet(io.BytesIO(_get(_release_asset_url(filename), timeout=_RELEASE_TIMEOUT)))
+def _load_course_repo_asset(name: str) -> pd.DataFrame:
+    return _read_parquet(
+        io.BytesIO(_get(_course_repo_parquet_url(name), timeout=_COURSE_REPO_TIMEOUT))
+    )
 
 
 def _source_load_error(name: str, source_exc: BaseException) -> RuntimeError:
     tried = ["copy shipped in data/", "local cache"]
-    if github_release_enabled() and _is_release_parquet(name):
-        tried.append("fast copy")
+    if course_repo_enabled() and name in COMMITTED_DATASETS:
+        tried.append("the course repository")
     tried.append("the original source")
     return RuntimeError(
         f"{name}: could not load the dataset. Tried: {', '.join(tried)}. "
@@ -300,7 +290,7 @@ def _source_load_error(name: str, source_exc: BaseException) -> RuntimeError:
 
 
 def _load(name: str, fetch: Callable[[], pd.DataFrame]) -> pd.DataFrame:
-    """Return committed copy, then cache, then GitHub release, then source."""
+    """Return committed copy, then cache, then course repository, then source."""
     if name in COMMITTED_DATASETS and _looks_like_data_dir(DATA_DIR):
         committed = _committed_path(name)
         if committed.is_file():
@@ -314,16 +304,16 @@ def _load(name: str, fetch: Callable[[], pd.DataFrame]) -> pd.DataFrame:
             label = str(cached)
         _announce(name, f"loaded from the local cache {label}")
         return _read_parquet(cached)
-    if github_release_enabled() and _is_release_parquet(name):
+    if course_repo_enabled() and name in COMMITTED_DATASETS:
         try:
-            frame = _load_release_asset(name)
+            frame = _load_course_repo_asset(name)
         except (requests.RequestException, ValueError, OSError):
             _announce(
                 name,
-                "fast copy unavailable, downloading from the original source",
+                "course repository unavailable, downloading from the original source",
             )
         else:
-            _announce(name, "loaded from the fast copy")
+            _announce(name, "loaded from the course repository")
             _write_cache(name, frame)
             return frame
     try:
@@ -385,8 +375,8 @@ def fetch_eco2mix() -> pd.DataFrame:
     Post-processing: keep ``Date``, ``Heure``, ``Consommation (MW)``; parse a
     datetime index from Date+Heure; drop NaNs. The source has 15-min slots with
     empty consumption on :15/:45; dropping NaNs (and keeping minutes in
-    {0, 30}) yields a 30-min series. Redistributed as release asset
-    ``eco2mix.parquet`` (Licence Ouverte v2.0).
+    {0, 30}) yields a 30-min series.     Redistributed as the committed file
+    ``data/eco2mix.parquet`` (Licence Ouverte v2.0).
     """
     content = _get(
         ECO2MIX_EXPORT_URL,
@@ -442,7 +432,7 @@ def fetch_nab() -> pd.DataFrame:
     Post-processing: concatenate every ``realKnownCause`` CSV with a ``series``
     column; parse ``timestamp``; add ``is_anomaly`` from ``combined_windows.json``.
     The D2 notebook can filter ``series == "machine_temperature_system_failure"``.
-    Redistributed as release asset ``nab.parquet`` (MIT).
+    Redistributed as the committed file ``data/nab.parquet`` (MIT).
     """
     labels = json.loads(_get(NAB_LABELS_URL))
     frames: list[pd.DataFrame] = []
@@ -527,7 +517,7 @@ def fetch_idfm() -> pd.DataFrame:
     ``nb_vald`` as text, so ``sum()`` via ODSQL fails; that quarter is aggregated
     from a two-column CSV export.
 
-    Redistributed as its own release asset ``idfm.parquet`` (ODbL, French
+    Redistributed as the committed file ``data/idfm.parquet`` (ODbL, French
     version) plus companion ``idfm.LICENSE.txt``. This file is a derived daily
     aggregate, not the raw extract.
     """
