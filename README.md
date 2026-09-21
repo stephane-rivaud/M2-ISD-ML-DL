@@ -57,6 +57,13 @@ Jupyter. The dataset loaders still look for the course copy first.
 [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/stephane-rivaud/M2-ISD-ML-DL/blob/main/sessions/d0-2026-09-14/notebooks/d0_first_contact_autonomous.ipynb)
 · [slides](sessions/d0-2026-09-14/dist/slides.pdf)
 · [setup check](sessions/d0-2026-09-14/setup-check.md)
+**21 September — tabular data and a first MLP**
+[![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/stephane-rivaud/M2-ISD-ML-DL/blob/main/sessions/d1-2026-09-21/am/notebooks/d1_am_tabular_sklearn_autonomous.ipynb)
+morning ·
+[![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/stephane-rivaud/M2-ISD-ML-DL/blob/main/sessions/d1-2026-09-21/pm/notebooks/d1_pm_first_mlp_pytorch_autonomous.ipynb)
+afternoon
+· [morning slides](sessions/d1-2026-09-21/am/dist/slides.pdf)
+· [afternoon slides](sessions/d1-2026-09-21/pm/dist/slides.pdf)
 
 ## LLM use
 
