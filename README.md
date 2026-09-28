@@ -64,6 +64,16 @@ morning ·
 afternoon
 · [morning slides](sessions/d1-2026-09-21/am/dist/slides.pdf)
 · [afternoon slides](sessions/d1-2026-09-21/pm/dist/slides.pdf)
+**28 September — forecasting and anomaly detection**
+[![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/stephane-rivaud/M2-ISD-ML-DL/blob/main/sessions/d2-2026-09-28/am/notebooks/d2_am_forecasting_autonomous.ipynb)
+morning ·
+[![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/stephane-rivaud/M2-ISD-ML-DL/blob/main/sessions/d2-2026-09-28/pm/notebooks/d2_pm_anomaly_detection_autonomous.ipynb)
+afternoon ·
+[![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/stephane-rivaud/M2-ISD-ML-DL/blob/main/sessions/d2-2026-09-28/pm/notebooks/d2_pm_pretrained_demo_autonomous.ipynb)
+pretrained demo
+· [morning slides](sessions/d2-2026-09-28/am/dist/slides.pdf)
+· [afternoon slides](sessions/d2-2026-09-28/pm/dist/slides.pdf)
+· [PyTorch ↔ Keras](common/keras-equivalence.md)
 
 ## LLM use
 
